@@ -6,4 +6,9 @@ venv/
 env/
 test_gtfs.db
 miway.db
+data_downloads/
+logs/
+*.log
+*.backup
+*_backup_*/
 

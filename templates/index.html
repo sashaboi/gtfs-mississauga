@@ -5,6 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MiWay Route Planner</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         * {
             margin: 0;
@@ -161,6 +163,223 @@
             color: #28a745;
             font-size: 0.85em;
             font-weight: 600;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 15px;
+            background: white;
+            border-radius: 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .tab:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .tab.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Map */
+        #map {
+            width: 100%;
+            height: 600px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .map-controls {
+            margin-bottom: 15px;
+        }
+
+        .map-stats {
+            display: flex;
+            gap: 15px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .stat-card {
+            flex: 1;
+            min-width: 150px;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-label {
+            font-size: 0.85em;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 1.8em;
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .alert-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .alert-box h4 {
+            margin: 0 0 10px 0;
+            color: #856404;
+        }
+
+        .alert-box p {
+            margin: 5px 0;
+            color: #856404;
+        }
+
+        .refresh-indicator {
+            display: inline-block;
+            padding: 5px 10px;
+            background: #28a745;
+            color: white;
+            border-radius: 5px;
+            font-size: 0.85em;
+            margin-left: 10px;
+        }
+
+        .refresh-indicator.updating {
+            background: #ffc107;
+        }
+
+        .nearby-buses-section {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .bus-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .bus-card:hover {
+            transform: translateX(5px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .bus-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .bus-route-badge {
+            background: #667eea;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 1.1em;
+        }
+
+        .bus-eta {
+            background: #28a745;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-weight: 600;
+        }
+
+        .bus-eta.soon {
+            background: #ffc107;
+            color: #000;
+        }
+
+        .bus-eta.now {
+            background: #dc3545;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.7;
+            }
+        }
+
+        .bus-details {
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .bus-details div {
+            margin: 5px 0;
+        }
+
+        .find-buses-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+        }
+
+        .find-buses-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(40, 167, 69, 0.4);
+        }
+
+        .find-buses-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .user-marker {
+            background: #dc3545;
+            border-radius: 50%;
+            border: 3px solid white;
+            box-shadow: 0 0 10px rgba(220, 53, 69, 0.5);
         }
 
         .btn-search {
@@ -431,57 +650,505 @@
             <p>Find the best bus route in Mississauga</p>
         </div>
 
-        <div class="card">
-            <form id="routeForm">
-                <div class="form-group">
-                    <label for="sourceStop">From (Source Stop)</label>
-                    <div class="select-wrapper">
-                        <select id="sourceStop" required>
-                            <option value="">Loading stops...</option>
-                        </select>
-                    </div>
-                    <div class="location-btn-wrapper">
-                        <button type="button" class="btn-location" id="sourceLocationBtn"
-                            onclick="findNearbyStops('source')">
-                            📍 Use My Location
-                        </button>
-                        <span class="location-status" id="sourceLocationStatus"></span>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="destStop">To (Destination Stop)</label>
-                    <div class="select-wrapper">
-                        <select id="destStop" required>
-                            <option value="">Loading stops...</option>
-                        </select>
-                    </div>
-                    <div class="location-btn-wrapper">
-                        <button type="button" class="btn-location" id="destLocationBtn"
-                            onclick="findNearbyStops('destination')">
-                            📍 Use My Location
-                        </button>
-                        <span class="location-status" id="destLocationStatus"></span>
-                    </div>
-                </div>
-
-                <div class="checkbox-group">
-                    <input type="checkbox" id="useCurrentTime" checked>
-                    <label for="useCurrentTime">Show only upcoming buses (from current time)</label>
-                </div>
-
-                <button type="submit" class="btn-search" id="searchBtn">
-                    Search Routes
-                </button>
-            </form>
+        <!-- Tabs -->
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('planner')">
+                📋 Route Planner
+            </div>
+            <div class="tab" onclick="switchTab('live')">
+                🚍 Live Tracking
+            </div>
         </div>
 
-        <div id="results"></div>
+        <!-- Route Planner Tab -->
+        <div id="planner-tab" class="tab-content active">
+            <div class="card">
+                <form id="routeForm">
+                    <div class="form-group">
+                        <label for="sourceStop">From (Source Stop)</label>
+                        <div class="select-wrapper">
+                            <select id="sourceStop" required>
+                                <option value="">Loading stops...</option>
+                            </select>
+                        </div>
+                        <div class="location-btn-wrapper">
+                            <button type="button" class="btn-location" id="sourceLocationBtn"
+                                onclick="findNearbyStops('source')">
+                                📍 Use My Location
+                            </button>
+                            <span class="location-status" id="sourceLocationStatus"></span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="destStop">To (Destination Stop)</label>
+                        <div class="select-wrapper">
+                            <select id="destStop" required>
+                                <option value="">Loading stops...</option>
+                            </select>
+                        </div>
+                        <div class="location-btn-wrapper">
+                            <button type="button" class="btn-location" id="destLocationBtn"
+                                onclick="findNearbyStops('destination')">
+                                📍 Use My Location
+                            </button>
+                            <span class="location-status" id="destLocationStatus"></span>
+                        </div>
+                    </div>
+
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="useCurrentTime" checked>
+                        <label for="useCurrentTime">Show only upcoming buses (from current time)</label>
+                    </div>
+
+                    <button type="submit" class="btn-search" id="searchBtn">
+                        Search Routes
+                    </button>
+                </form>
+            </div>
+
+            <div id="results"></div>
+        </div>
+
+        <!-- Live Tracking Tab -->
+        <div id="live-tab" class="tab-content">
+            <div class="card">
+                <h2 style="margin-bottom: 20px;">🚍 Live Bus Tracking</h2>
+
+                <div class="map-controls">
+                    <div class="form-group">
+                        <label for="routeSelect">Select Route</label>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <div class="select-wrapper" style="flex: 1;">
+                                <select id="routeSelect" onchange="loadVehicles()">
+                                    <option value="">All Routes</option>
+                                </select>
+                            </div>
+                            <button type="button" class="btn-location" onclick="loadVehicles()" style="width: auto;">
+                                🔄 Refresh
+                            </button>
+                            <span class="refresh-indicator" id="refreshStatus">Auto-refresh: ON</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Find My Buses Button -->
+                <button type="button" class="find-buses-btn" id="findMyBusesBtn" onclick="findMyBuses()">
+                    📍 Find Buses Near Me
+                </button>
+
+                <!-- Nearby Buses Results -->
+                <div id="nearby-buses-container"></div>
+
+                <!-- Alerts -->
+                <div id="alerts-container"></div>
+
+                <!-- Map -->
+                <div id="map"></div>
+
+                <!-- Stats -->
+                <div class="map-stats">
+                    <div class="stat-card">
+                        <div class="stat-label">Buses Tracked</div>
+                        <div class="stat-value" id="busCount">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Routes Active</div>
+                        <div class="stat-value" id="routeCount">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Last Update</div>
+                        <div class="stat-value" id="lastUpdate" style="font-size: 1.2em;">--:--</div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
         let stops = [];
         let userLocation = null;
+        let map = null;
+        let vehicleMarkers = {};
+        let refreshInterval = null;
+        let routes = [];
+        let userMarker = null;
+        let nearbyBusesData = [];
+
+        // Tab switching
+        function switchTab(tabName) {
+            // Update tab buttons
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+
+            // Update tab content
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            document.getElementById(tabName + '-tab').classList.add('active');
+
+            // Initialize map when switching to live tab
+            if (tabName === 'live' && !map) {
+                initMap();
+                loadRoutes();
+                loadVehicles();
+                startAutoRefresh();
+            }
+
+            // Stop auto-refresh when leaving live tab
+            if (tabName !== 'live' && refreshInterval) {
+                stopAutoRefresh();
+            }
+        }
+
+        // Initialize Leaflet map
+        function initMap() {
+            // Center on Mississauga (City Centre)
+            const mississauga = [43.5890, -79.6441];
+
+            map = L.map('map').setView(mississauga, 12);
+
+            // Add OpenStreetMap tiles
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 19
+            }).addTo(map);
+
+            console.log('Map initialized');
+        }
+
+        // Load routes for dropdown
+        async function loadRoutes() {
+            try {
+                const response = await fetch('/api/routes');
+                routes = await response.json();
+
+                const select = document.getElementById('routeSelect');
+                select.innerHTML = '<option value="">All Routes</option>';
+
+                routes.forEach(route => {
+                    const option = new Option(
+                        `${route.number} - ${route.name}`,
+                        route.id
+                    );
+                    select.add(option);
+                });
+
+                console.log(`Loaded ${routes.length} routes`);
+            } catch (error) {
+                console.error('Error loading routes:', error);
+            }
+        }
+
+        // Create custom bus icon
+        function createBusIcon(bearing, color) {
+            const iconHtml = `
+                <div style="transform: rotate(${bearing || 0}deg); font-size: 24px;">
+                    🚌
+                </div>
+            `;
+
+            return L.divIcon({
+                html: iconHtml,
+                className: 'bus-marker',
+                iconSize: [30, 30],
+                iconAnchor: [15, 15]
+            });
+        }
+
+        // Load vehicles from API
+        async function loadVehicles() {
+            const routeId = document.getElementById('routeSelect').value;
+            const refreshStatus = document.getElementById('refreshStatus');
+
+            refreshStatus.textContent = 'Updating...';
+            refreshStatus.classList.add('updating');
+
+            try {
+                const url = routeId ? `/api/vehicles?route_id=${routeId}` : '/api/vehicles';
+                const response = await fetch(url);
+                const data = await response.json();
+
+                // Clear old markers
+                Object.values(vehicleMarkers).forEach(marker => map.removeLayer(marker));
+                vehicleMarkers = {};
+
+                // Track unique routes
+                const activeRoutes = new Set();
+
+                // Add new markers
+                data.vehicles.forEach(vehicle => {
+                    if (vehicle.latitude && vehicle.longitude) {
+                        const marker = L.marker(
+                            [vehicle.latitude, vehicle.longitude],
+                            { icon: createBusIcon(vehicle.bearing, vehicle.route_color) }
+                        ).addTo(map);
+
+                        // Create popup
+                        let popup = `
+                            <div style="min-width: 200px;">
+                                <h3 style="margin: 0 0 10px 0;">🚌 Route ${vehicle.route_number}</h3>
+                                <p style="margin: 5px 0;"><strong>${vehicle.route_name}</strong></p>
+                                ${vehicle.headsign ? `<p style="margin: 5px 0;">→ ${vehicle.headsign}</p>` : ''}
+                                <hr style="margin: 10px 0;">
+                                <p style="margin: 5px 0;">Vehicle: ${vehicle.vehicle_id}</p>
+                                ${vehicle.speed ? `<p style="margin: 5px 0;">Speed: ${(vehicle.speed * 3.6).toFixed(1)} km/h</p>` : ''}
+                                ${vehicle.current_stop ? `<p style="margin: 5px 0;">At: ${vehicle.current_stop}</p>` : ''}
+                                ${vehicle.occupancy ? `<p style="margin: 5px 0;">Occupancy: ${vehicle.occupancy.replace(/_/g, ' ')}</p>` : ''}
+                            </div>
+                        `;
+
+                        marker.bindPopup(popup);
+                        vehicleMarkers[vehicle.vehicle_id] = marker;
+                        activeRoutes.add(vehicle.route_id);
+                    }
+                });
+
+                // Update stats
+                document.getElementById('busCount').textContent = data.count;
+                document.getElementById('routeCount').textContent = activeRoutes.size;
+                document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+
+                // Load alerts for selected route
+                if (routeId) {
+                    loadAlerts(routeId);
+                } else {
+                    document.getElementById('alerts-container').innerHTML = '';
+                }
+
+                console.log(`Loaded ${data.count} vehicles`);
+
+            } catch (error) {
+                console.error('Error loading vehicles:', error);
+            } finally {
+                refreshStatus.textContent = 'Auto-refresh: ON';
+                refreshStatus.classList.remove('updating');
+            }
+        }
+
+        // Load alerts
+        async function loadAlerts(routeId) {
+            try {
+                const url = routeId ? `/api/alerts?route_id=${routeId}` : '/api/alerts';
+                const response = await fetch(url);
+                const data = await response.json();
+
+                const container = document.getElementById('alerts-container');
+
+                if (data.count === 0) {
+                    container.innerHTML = '';
+                    return;
+                }
+
+                let html = '';
+                data.alerts.forEach(alert => {
+                    html += `
+                        <div class="alert-box">
+                            <h4>🚨 ${alert.header || 'Service Alert'}</h4>
+                            <p><strong>Cause:</strong> ${alert.cause || 'Unknown'}</p>
+                            <p><strong>Effect:</strong> ${alert.effect || 'Unknown'}</p>
+                            ${alert.description ? `<p>${alert.description}</p>` : ''}
+                        </div>
+                    `;
+                });
+
+                container.innerHTML = html;
+
+            } catch (error) {
+                console.error('Error loading alerts:', error);
+            }
+        }
+
+        // Auto-refresh
+        function startAutoRefresh() {
+            refreshInterval = setInterval(() => {
+                loadVehicles();
+            }, 30000); // Refresh every 30 seconds
+        }
+
+        function stopAutoRefresh() {
+            if (refreshInterval) {
+                clearInterval(refreshInterval);
+                refreshInterval = null;
+            }
+        }
+
+        // Find buses near user's location
+        async function findMyBuses() {
+            const btn = document.getElementById('findMyBusesBtn');
+            const container = document.getElementById('nearby-buses-container');
+
+            // Check if geolocation is supported
+            if (!navigator.geolocation) {
+                container.innerHTML = '<div class="alert-box"><h4>Geolocation not supported</h4></div>';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'Getting your location...';
+            container.innerHTML = '<div class="nearby-buses-section">Loading...</div>';
+
+            navigator.geolocation.getCurrentPosition(
+                async (position) => {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+
+                    btn.textContent = 'Finding nearby buses...';
+
+                    try {
+                        const response = await fetch('/api/nearby-buses', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                latitude: lat,
+                                longitude: lon,
+                                radius: 0.5  // 500m radius
+                            })
+                        });
+
+                        const data = await response.json();
+                        nearbyBusesData = data.buses || [];
+
+                        // Add user marker to map
+                        if (userMarker) {
+                            map.removeLayer(userMarker);
+                        }
+
+                        userMarker = L.circleMarker([lat, lon], {
+                            radius: 10,
+                            fillColor: '#dc3545',
+                            color: 'white',
+                            weight: 3,
+                            opacity: 1,
+                            fillOpacity: 0.8
+                        }).addTo(map);
+
+                        userMarker.bindPopup('<strong>📍 Your Location</strong>');
+
+                        // Center map on user
+                        map.setView([lat, lon], 14);
+
+                        // Display results
+                        displayNearbyBuses(data);
+
+                        // Highlight buses on map
+                        highlightNearbyBuses(data.buses);
+
+                    } catch (error) {
+                        console.error('Error finding nearby buses:', error);
+                        container.innerHTML = `
+                            <div class="alert-box">
+                                <h4>Error finding buses</h4>
+                                <p>Please try again</p>
+                            </div>
+                        `;
+                    } finally {
+                        btn.disabled = false;
+                        btn.textContent = '📍 Find Buses Near Me';
+                    }
+                },
+                (error) => {
+                    btn.disabled = false;
+                    btn.textContent = '📍 Find Buses Near Me';
+
+                    let message = 'Unable to get your location';
+                    switch (error.code) {
+                        case error.PERMISSION_DENIED:
+                            message = 'Location permission denied. Please enable location access.';
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            message = 'Location unavailable';
+                            break;
+                        case error.TIMEOUT:
+                            message = 'Location request timeout';
+                            break;
+                    }
+
+                    container.innerHTML = `
+                        <div class="alert-box">
+                            <h4>Location Error</h4>
+                            <p>${message}</p>
+                        </div>
+                    `;
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 0
+                }
+            );
+        }
+
+        // Display nearby buses
+        function displayNearbyBuses(data) {
+            const container = document.getElementById('nearby-buses-container');
+
+            if (data.count === 0) {
+                container.innerHTML = `
+                    <div class="nearby-buses-section">
+                        <h3>No buses found nearby</h3>
+                        <p>There are no buses approaching your nearby stops in the next 30 minutes.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = `
+                <div class="nearby-buses-section">
+                    <h3>🚌 Buses You Can Catch (${data.count})</h3>
+                    <p style="margin-bottom: 15px;">Showing buses arriving at stops within 500m of your location</p>
+            `;
+
+            data.buses.forEach(bus => {
+                const etaClass = bus.eta_minutes <= 5 ? 'now' : bus.eta_minutes <= 10 ? 'soon' : '';
+                const etaText = bus.eta_minutes === 0 ? 'Now' : bus.eta_minutes === 1 ? '1 min' : `${bus.eta_minutes} mins`;
+
+                html += `
+                    <div class="bus-card" onclick="focusBusOnMap('${bus.vehicle_id}')">
+                        <div class="bus-card-header">
+                            <div class="bus-route-badge">Route ${bus.route_number}</div>
+                            <div class="bus-eta ${etaClass}">ETA: ${etaText}</div>
+                        </div>
+                        <h4 style="margin: 10px 0;">${bus.route_name}</h4>
+                        <p style="margin: 5px 0; color: #667eea; font-weight: 600;">→ ${bus.headsign || 'Service'}</p>
+                        <div class="bus-details">
+                            <div>📍 Stop: <strong>${bus.stop_name}</strong> (${bus.stop_distance_from_user} km away)</div>
+                            <div>🚌 Vehicle: ${bus.vehicle_id}</div>
+                            ${bus.occupancy ? `<div>👥 ${bus.occupancy.replace(/_/g, ' ')}</div>` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        // Highlight nearby buses on map
+        function highlightNearbyBuses(buses) {
+            // Reset all markers to normal
+            Object.values(vehicleMarkers).forEach(marker => {
+                marker.setOpacity(0.6);
+            });
+
+            // Highlight nearby buses
+            buses.forEach(bus => {
+                const marker = vehicleMarkers[bus.vehicle_id];
+                if (marker) {
+                    marker.setOpacity(1.0);
+                    marker.setZIndexOffset(1000);
+                }
+            });
+        }
+
+        // Focus on specific bus on map
+        function focusBusOnMap(vehicleId) {
+            const marker = vehicleMarkers[vehicleId];
+            if (marker) {
+                map.setView(marker.getLatLng(), 15);
+                marker.openPopup();
+            }
+        }
 
         // Load stops on page load
         async function loadStops() {

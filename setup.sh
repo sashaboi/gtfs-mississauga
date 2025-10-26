@@ -16,11 +16,15 @@ source venv/bin/activate
 
 # Install dependencies
 echo "Installing dependencies..."
-pip install Flask
+pip install Flask gtfs-realtime-bindings requests
 
 echo ""
-echo "Loading GTFS data into database..."
+echo "Loading GTFS static data into database..."
 python3 load_gtfs.py
+
+echo ""
+echo "Loading GTFS real-time data (alerts, vehicles, delays)..."
+python3 ingest_realtime.py
 
 echo ""
 echo "=============================="
