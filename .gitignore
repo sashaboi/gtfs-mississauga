@@ -1,0 +1,9 @@
+*.db
+*.pyc
+__pycache__/
+.DS_Store
+venv/
+env/
+test_gtfs.db
+miway.db
+
