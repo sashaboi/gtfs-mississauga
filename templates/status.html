@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Status - MiWay Route Planner</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #f5f7fa;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 30px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 1.5em;
+        }
+
+        .back-link {
+            color: white;
+            text-decoration: none;
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+
+        .back-link:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .status-card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid #ccc;
+        }
+
+        .status-card.healthy {
+            border-left-color: #4caf50;
+        }
+
+        .status-card.unhealthy {
+            border-left-color: #f44336;
+        }
+
+        .status-card.rate-limited {
+            border-left-color: #ff9800;
+        }
+
+        .status-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .status-name {
+            font-weight: 600;
+            font-size: 1em;
+            color: #333;
+        }
+
+        .status-badge {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.75em;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-badge.healthy {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .status-badge.unhealthy {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        .status-badge.rate-limited {
+            background: #fff3e0;
+            color: #f57c00;
+        }
+
+        .status-details {
+            font-size: 0.85em;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .status-details div {
+            margin: 4px 0;
+        }
+
+        .section-card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            font-size: 1.2em;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .history-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85em;
+        }
+
+        .history-table th {
+            text-align: left;
+            padding: 10px;
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #333;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .history-table td {
+            padding: 10px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .history-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .timestamp {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .error-text {
+            color: #f44336;
+            font-size: 0.85em;
+            max-width: 400px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .stat-box {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2em;
+            font-weight: 600;
+            color: #667eea;
+            display: block;
+        }
+
+        .stat-label {
+            font-size: 0.85em;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .refresh-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9em;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .refresh-btn:hover {
+            background: #5568d3;
+            transform: translateY(-1px);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        .last-updated {
+            text-align: center;
+            color: #666;
+            font-size: 0.85em;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <div>
+                <h1>🔍 API Status Dashboard</h1>
+                <div style="font-size: 0.85em; opacity: 0.9; margin-top: 5px;">Real-time monitoring of MiWay GTFS
+                    endpoints</div>
+            </div>
+            <a href="/" class="back-link">← Back to App</a>
+        </div>
+
+        <!-- Current Status -->
+        <div id="currentStatus">
+            <div class="loading">
+                <div class="spinner"></div>
+                Loading status...
+            </div>
+        </div>
+
+        <!-- 24h Statistics -->
+        <div class="section-card">
+            <div class="section-title">📊 Last 24 Hours Statistics</div>
+            <div id="statistics">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    Loading statistics...
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent History -->
+        <div class="section-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <div class="section-title" style="margin-bottom: 0;">📝 Recent Health Checks</div>
+                <button class="refresh-btn" onclick="refreshData()">🔄 Refresh</button>
+            </div>
+            <div id="history">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    Loading history...
+                </div>
+            </div>
+        </div>
+
+        <div class="last-updated" id="lastUpdated"></div>
+    </div>
+
+    <script>
+        let autoRefreshInterval;
+
+        function getStatusEmoji(status) {
+            const map = {
+                'healthy': '✅',
+                'rate_limited': '⚠️',
+                'timeout': '⏱️',
+                'connection_error': '❌',
+                'server_error': '🔥',
+                'client_error': '❌',
+                'warning': '⚠️',
+                'error': '❌',
+                'unknown': '❓'
+            };
+            return map[status] || '❓';
+        }
+
+        function formatTimestamp(timestamp) {
+            const date = new Date(timestamp);
+            return date.toLocaleString();
+        }
+
+        function formatResponseTime(time) {
+            if (!time) return 'N/A';
+            return `${time.toFixed(2)}s`;
+        }
+
+        function formatSize(bytes) {
+            if (!bytes) return 'N/A';
+            if (bytes < 1024) return `${bytes} B`;
+            if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+            return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+        }
+
+        async function loadCurrentStatus() {
+            try {
+                const response = await fetch('/api/health-summary');
+                const data = await response.json();
+
+                if (data.latest && data.latest.length > 0) {
+                    let html = '<div class="status-grid">';
+
+                    data.latest.forEach(check => {
+                        const statusClass = check.status === 'healthy' ? 'healthy' :
+                            check.rate_limited ? 'rate-limited' : 'unhealthy';
+
+                        html += `
+                            <div class="status-card ${statusClass}">
+                                <div class="status-header">
+                                    <div class="status-name">${getStatusEmoji(check.status)} ${check.endpoint_name}</div>
+                                    <span class="status-badge ${statusClass}">${check.status}</span>
+                                </div>
+                                <div class="status-details">
+                                    ${check.status_code ? `<div><strong>HTTP:</strong> ${check.status_code}</div>` : ''}
+                                    ${check.response_time ? `<div><strong>Response:</strong> ${formatResponseTime(check.response_time)}</div>` : ''}
+                                    ${check.content_length ? `<div><strong>Size:</strong> ${formatSize(check.content_length)}</div>` : ''}
+                                    ${check.error_message ? `<div class="error-text"><strong>Error:</strong> ${check.error_message}</div>` : ''}
+                                    <div class="timestamp"><strong>Last check:</strong> ${formatTimestamp(check.timestamp)}</div>
+                                </div>
+                            </div>
+                        `;
+                    });
+
+                    html += '</div>';
+                    document.getElementById('currentStatus').innerHTML = html;
+                } else {
+                    document.getElementById('currentStatus').innerHTML = '<div class="loading">No health check data available yet</div>';
+                }
+
+                // Load statistics
+                if (data.stats_24h && data.stats_24h.length > 0) {
+                    let statsHtml = '<div class="stats-grid">';
+
+                    data.stats_24h.forEach(stat => {
+                        const uptime = stat.total_checks > 0 ? ((stat.healthy_count / stat.total_checks) * 100).toFixed(1) : 0;
+
+                        statsHtml += `
+                            <div class="stat-box">
+                                <strong>${stat.endpoint_name}</strong>
+                                <span class="stat-value">${uptime}%</span>
+                                <div class="stat-label">Uptime</div>
+                                <div style="font-size: 0.75em; color: #999; margin-top: 5px;">
+                                    ${stat.healthy_count}/${stat.total_checks} checks passed
+                                </div>
+                            </div>
+                        `;
+                    });
+
+                    statsHtml += '</div>';
+                    document.getElementById('statistics').innerHTML = statsHtml;
+                }
+
+            } catch (error) {
+                console.error('Error loading status:', error);
+                document.getElementById('currentStatus').innerHTML = '<div class="loading">Error loading status</div>';
+            }
+        }
+
+        async function loadHistory() {
+            try {
+                const response = await fetch('/api/health-history?limit=50');
+                const data = await response.json();
+
+                if (data.length > 0) {
+                    let html = `
+                        <table class="history-table">
+                            <thead>
+                                <tr>
+                                    <th>Timestamp</th>
+                                    <th>Endpoint</th>
+                                    <th>Status</th>
+                                    <th>HTTP</th>
+                                    <th>Response Time</th>
+                                    <th>Size</th>
+                                    <th>Error</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                    `;
+
+                    data.forEach(check => {
+                        html += `
+                            <tr>
+                                <td class="timestamp">${formatTimestamp(check.timestamp)}</td>
+                                <td>${check.endpoint_name}</td>
+                                <td>${getStatusEmoji(check.status)} ${check.status}</td>
+                                <td>${check.status_code || '-'}</td>
+                                <td>${formatResponseTime(check.response_time)}</td>
+                                <td>${formatSize(check.content_length)}</td>
+                                <td class="error-text">${check.error_message || '-'}</td>
+                            </tr>
+                        `;
+                    });
+
+                    html += '</tbody></table>';
+                    document.getElementById('history').innerHTML = html;
+                } else {
+                    document.getElementById('history').innerHTML = '<div class="loading">No history available yet. Run health check to populate data.</div>';
+                }
+
+            } catch (error) {
+                console.error('Error loading history:', error);
+                document.getElementById('history').innerHTML = '<div class="loading">Error loading history</div>';
+            }
+        }
+
+        async function refreshData() {
+            await Promise.all([
+                loadCurrentStatus(),
+                loadHistory()
+            ]);
+
+            document.getElementById('lastUpdated').textContent =
+                `Last updated: ${new Date().toLocaleString()}`;
+        }
+
+        // Auto-refresh every 30 seconds
+        function startAutoRefresh() {
+            autoRefreshInterval = setInterval(refreshData, 30000);
+        }
+
+        // Initial load
+        document.addEventListener('DOMContentLoaded', () => {
+            refreshData();
+            startAutoRefresh();
+        });
+
+        // Stop refresh when leaving page
+        window.addEventListener('beforeunload', () => {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+            }
+        });
+    </script>
+</body>
+
+</html>

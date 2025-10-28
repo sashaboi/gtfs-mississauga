@@ -6,9 +6,18 @@ from flask import Flask, render_template, request, jsonify
 import sqlite3
 from datetime import datetime
 import math
+import threading
+import time
+from live_updater import update_all_realtime_data
 
 app = Flask(__name__)
 DB_FILE = 'miway.db'
+
+# Track last update time and background worker
+last_update_time = None
+update_lock = threading.Lock()
+background_worker = None
+worker_running = False
 
 
 def get_db():
@@ -198,6 +207,12 @@ def index():
     return render_template('index.html')
 
 
+@app.route('/status')
+def status_page():
+    """API Status Dashboard"""
+    return render_template('status.html')
+
+
 @app.route('/api/stops')
 def api_stops():
     """API endpoint to get all stops"""
@@ -205,14 +220,12 @@ def api_stops():
     return jsonify(stops)
 
 
-@app.route('/api/nearby-stops', methods=['POST'])
+@app.route('/api/nearby-stops', methods=['GET'])
 def api_nearby_stops():
     """API endpoint to get nearby stops based on user location"""
-    data = request.get_json()
-    
-    user_lat = data.get('latitude')
-    user_lon = data.get('longitude')
-    limit = data.get('limit', 10)
+    user_lat = request.args.get('lat', type=float)
+    user_lon = request.args.get('lon', type=float)
+    limit = request.args.get('limit', 10, type=int)
     
     if user_lat is None or user_lon is None:
         return jsonify({'error': 'Latitude and longitude required'}), 400
@@ -235,6 +248,7 @@ def api_nearby_stops():
     })
 
 
+@app.route('/api/find-route', methods=['POST'])
 @app.route('/api/search', methods=['POST'])
 def api_search():
     """API endpoint to search routes"""
@@ -389,23 +403,179 @@ def api_alerts():
     return jsonify({'alerts': alerts, 'count': len(alerts)})
 
 
-@app.route('/api/nearby-buses', methods=['POST'])
+@app.route('/api/refresh-realtime', methods=['GET', 'POST'])
+def api_refresh_realtime():
+    """
+    Force refresh of real-time data from MiWay servers
+    Downloads fresh VehiclePositions, TripUpdates, and Alerts
+    """
+    global last_update_time
+    
+    with update_lock:
+        try:
+            print(f"\n[{datetime.now().strftime('%H:%M:%S')}] Manual refresh triggered...")
+            results = update_all_realtime_data()
+            
+            if results['success']:
+                last_update_time = datetime.now()
+                return jsonify({
+                    'success': True,
+                    'message': 'Real-time data updated successfully',
+                    'timestamp': results['timestamp'],
+                    'vehicles': results['vehicles'],
+                    'trip_updates': results['trip_updates'],
+                    'alerts': results['alerts'],
+                    'errors': results['errors'] if results['errors'] else None,
+                    'error_details': results.get('error_details', None)
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'message': 'Update failed',
+                    'errors': results['errors'],
+                    'error_details': results.get('error_details', [])
+                }), 500
+        
+        except Exception as e:
+            return jsonify({
+                'success': False,
+                'message': str(e)
+            }), 500
+
+
+@app.route('/api/data-freshness')
+def api_data_freshness():
+    """Get information about when data was last updated"""
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    # Get newest vehicle position timestamp
+    cursor.execute("SELECT MAX(timestamp) as latest FROM vehicle_positions")
+    vehicle_ts = cursor.fetchone()['latest']
+    
+    # Get newest trip update timestamp
+    cursor.execute("SELECT MAX(timestamp) as latest FROM trip_updates")
+    trip_ts = cursor.fetchone()['latest']
+    
+    # Get newest alert timestamp
+    cursor.execute("SELECT MAX(timestamp) as latest FROM alerts")
+    alert_ts = cursor.fetchone()['latest']
+    
+    conn.close()
+    
+    # Convert timestamps to datetime
+    data_age_seconds = None
+    if vehicle_ts:
+        data_age_seconds = int(datetime.now().timestamp()) - vehicle_ts
+    
+    return jsonify({
+        'last_update': last_update_time.isoformat() if last_update_time else None,
+        'vehicle_timestamp': vehicle_ts,
+        'trip_update_timestamp': trip_ts,
+        'alert_timestamp': alert_ts,
+        'data_age_seconds': data_age_seconds,
+        'is_stale': data_age_seconds > 300 if data_age_seconds else True  # Stale if > 5 minutes
+    })
+
+
+@app.route('/api/health-history')
+def api_health_history():
+    """Get health check history"""
+    try:
+        limit = request.args.get('limit', 100, type=int)
+        endpoint = request.args.get('endpoint', None)
+        
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        if endpoint:
+            cursor.execute("""
+                SELECT * FROM health_checks 
+                WHERE endpoint_name = ?
+                ORDER BY timestamp DESC 
+                LIMIT ?
+            """, (endpoint, limit))
+        else:
+            cursor.execute("""
+                SELECT * FROM health_checks 
+                ORDER BY timestamp DESC 
+                LIMIT ?
+            """, (limit,))
+        
+        columns = [description[0] for description in cursor.description]
+        results = [dict(zip(columns, row)) for row in cursor.fetchall()]
+        
+        conn.close()
+        return jsonify(results)
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/health-summary')
+def api_health_summary():
+    """Get health check summary statistics"""
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        
+        # Get latest check for each endpoint
+        cursor.execute("""
+            WITH latest_checks AS (
+                SELECT endpoint_name, MAX(timestamp) as latest_time
+                FROM health_checks
+                GROUP BY endpoint_name
+            )
+            SELECT h.*
+            FROM health_checks h
+            INNER JOIN latest_checks l 
+                ON h.endpoint_name = l.endpoint_name 
+                AND h.timestamp = l.latest_time
+            ORDER BY h.endpoint_name
+        """)
+        
+        columns = [description[0] for description in cursor.description]
+        latest = [dict(zip(columns, row)) for row in cursor.fetchall()]
+        
+        # Get statistics for last 24 hours
+        cursor.execute("""
+            SELECT 
+                endpoint_name,
+                COUNT(*) as total_checks,
+                SUM(CASE WHEN status = 'healthy' THEN 1 ELSE 0 END) as healthy_count,
+                SUM(CASE WHEN rate_limited = 1 THEN 1 ELSE 0 END) as rate_limited_count,
+                AVG(CASE WHEN response_time IS NOT NULL THEN response_time ELSE 0 END) as avg_response_time,
+                MIN(timestamp) as first_check,
+                MAX(timestamp) as last_check
+            FROM health_checks
+            WHERE datetime(timestamp) >= datetime('now', '-24 hours')
+            GROUP BY endpoint_name
+        """)
+        
+        columns = [description[0] for description in cursor.description]
+        stats = [dict(zip(columns, row)) for row in cursor.fetchall()]
+        
+        conn.close()
+        
+        return jsonify({
+            'latest': latest,
+            'stats_24h': stats
+        })
+    
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/nearby-buses', methods=['GET'])
 def api_nearby_buses():
     """Find buses near user's location"""
-    data = request.get_json()
-    
-    user_lat = data.get('latitude')
-    user_lon = data.get('longitude')
-    radius_km = data.get('radius', 0.5)  # Default 500m radius
+    user_lat = request.args.get('lat', type=float)
+    user_lon = request.args.get('lon', type=float)
+    radius_km = request.args.get('radius', 0.5, type=float)  # Default 500m radius
+    limit = request.args.get('limit', 10, type=int)
     
     if user_lat is None or user_lon is None:
         return jsonify({'error': 'Latitude and longitude required'}), 400
-    
-    try:
-        user_lat = float(user_lat)
-        user_lon = float(user_lon)
-    except (ValueError, TypeError):
-        return jsonify({'error': 'Invalid coordinates'}), 400
     
     # Get nearby stops
     nearby_stops = get_nearby_stops(user_lat, user_lon, limit=10)
@@ -513,8 +683,54 @@ def api_nearby_buses():
     })
 
 
+def background_update_worker():
+    """
+    Background worker that fetches fresh real-time data every 30 seconds
+    """
+    global last_update_time, worker_running
+    
+    print(f"[{datetime.now().strftime('%H:%M:%S')}] Background worker started (updates every 30 seconds)")
+    
+    while worker_running:
+        try:
+            with update_lock:
+                print(f"\n[{datetime.now().strftime('%H:%M:%S')}] Background update starting...")
+                results = update_all_realtime_data()
+                
+                if results['success']:
+                    last_update_time = datetime.now()
+                    print(f"[{datetime.now().strftime('%H:%M:%S')}] ✅ Background update complete")
+                    print(f"   Vehicles: {results['vehicles']}, Trips: {results['trip_updates']}, Alerts: {results['alerts']}")
+                else:
+                    print(f"[{datetime.now().strftime('%H:%M:%S')}] ⚠️  Background update had errors: {results['errors']}")
+        
+        except Exception as e:
+            print(f"[{datetime.now().strftime('%H:%M:%S')}] ❌ Background update error: {e}")
+        
+        # Wait 30 seconds before next update
+        time.sleep(30)
+
+
+def start_background_worker():
+    """Start the background update worker"""
+    global background_worker, worker_running
+    
+    worker_running = True
+    background_worker = threading.Thread(target=background_update_worker, daemon=True)
+    background_worker.start()
+
+
+def stop_background_worker():
+    """Stop the background update worker"""
+    global worker_running
+    worker_running = False
+    if background_worker:
+        background_worker.join(timeout=5)
+
+
 if __name__ == '__main__':
     import os
+    import atexit
     
     # Check if database exists
     if not os.path.exists(DB_FILE):
@@ -528,12 +744,33 @@ if __name__ == '__main__':
         exit(1)
     
     print("=" * 80)
-    print("🚌 MiWay Route Planner")
+    print("🚌 MiWay Route Planner with Live Updates")
     print("=" * 80)
     print()
     print("🌐 Starting server at http://localhost:5001")
     print("   Press Ctrl+C to stop")
     print()
     
-    app.run(debug=True, host='0.0.0.0', port=5001)
+    # Initial data update
+    print("📥 Performing initial real-time data update...")
+    initial_results = update_all_realtime_data()
+    if initial_results['success']:
+        last_update_time = datetime.now()
+        print(f"✅ Initial update complete: {initial_results['vehicles']} vehicles loaded")
+    else:
+        print(f"⚠️  Initial update had errors: {initial_results['errors']}")
+    print()
+    
+    # Start background worker
+    start_background_worker()
+    
+    # Register cleanup function
+    atexit.register(stop_background_worker)
+    
+    try:
+        app.run(debug=False, host='0.0.0.0', port=5001, use_reloader=False)
+    except KeyboardInterrupt:
+        print("\n\n🛑 Stopping server...")
+        stop_background_worker()
+        print("✅ Server stopped")
 

@@ -11,12 +11,15 @@ A web application for planning bus routes using Mississauga MiWay GTFS data.
 - Complete route details with all intermediate stops
 - 📍 Location-based stop finder (uses browser GPS)
 
-### Real-Time Data
+### Real-Time Data (TRULY LIVE!)
 - 🚨 Live service alerts (construction, detours, stop changes)
-- 🚍 Real-time bus positions (127+ buses tracked)
+- 🚍 **Real-time bus positions** - Downloads from MiWay every 30 seconds!
+- 🔴 **Manual live refresh** - Force update anytime
+- ⏱️ **Data freshness indicator** - See exactly how fresh your data is
 - ⏰ Trip delay predictions
 - 👥 Bus occupancy status (crowding levels)
 - 📍 **Find buses near you** - Shows which buses you can catch with ETAs!
+- 📈 **API Status Dashboard** - Monitor MiWay endpoints with detailed health logs
 
 ## Quick Start
 
@@ -32,7 +35,9 @@ A web application for planning bus routes using Mississauga MiWay GTFS data.
 ./run.sh
 ```
 
-3. **Open browser to:** `http://localhost:5001`
+3. **Open browser to:**
+   - Main App: `http://localhost:5001`
+   - API Status Dashboard: `http://localhost:5001/status`
 
 ### Option 2: Manual Setup
 

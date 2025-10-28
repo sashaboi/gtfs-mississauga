@@ -23,6 +23,10 @@ echo "Loading GTFS static data into database..."
 python3 load_gtfs.py
 
 echo ""
+echo "Creating health check table..."
+python3 create_health_table.py
+
+echo ""
 echo "Loading GTFS real-time data (alerts, vehicles, delays)..."
 python3 ingest_realtime.py
 
