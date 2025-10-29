@@ -966,13 +966,13 @@
 
                 // Filter routes
                 const matches = allRoutes.filter(route => {
-                    const shortName = (route.route_short_name || '').toLowerCase();
-                    const longName = (route.route_long_name || '').toLowerCase();
-                    const routeId = (route.route_id || '').toLowerCase();
+                    const number = (route.number || '').toString().toLowerCase();
+                    const name = (route.name || '').toLowerCase();
+                    const id = (route.id || '').toString().toLowerCase();
 
-                    return shortName.includes(query) ||
-                        longName.includes(query) ||
-                        routeId.includes(query);
+                    return number.includes(query) ||
+                        name.includes(query) ||
+                        id.includes(query);
                 }).slice(0, 10);
 
                 if (matches.length > 0) {
@@ -1016,9 +1016,9 @@
 
             resultsDiv.innerHTML = routes.map((route, index) => `
                 <div class="autocomplete-item" 
-                     onclick="selectRoute('${route.route_id}', '${route.route_short_name}', '${route.route_long_name.replace(/'/g, "\\'")}')">
-                    <strong>${route.route_short_name}</strong> - ${route.route_long_name}<br>
-                    <small style="color: #999;">Route ID: ${route.route_id}</small>
+                     onclick="selectRoute('${route.id}', '${route.number}', '${route.name.replace(/'/g, "\\'")}')">
+                    <strong>${route.number}</strong> - ${route.name}<br>
+                    <small style="color: #999;">Route ID: ${route.id}</small>
                 </div>
             `).join('');
 
@@ -1026,8 +1026,8 @@
             selectedStopIndex = -1;
         }
 
-        function selectRoute(routeId, routeShortName, routeLongName) {
-            document.getElementById('routeFilterSearch').value = `${routeShortName} - ${routeLongName}`;
+        function selectRoute(routeId, routeNumber, routeName) {
+            document.getElementById('routeFilterSearch').value = `${routeNumber} - ${routeName}`;
             document.getElementById('routeFilter').value = routeId;
             document.getElementById('routeFilterResults').classList.remove('show');
             document.getElementById('routeFilterSearch').nextElementSibling.classList.add('show');
@@ -1078,6 +1078,54 @@
         function createBusMarker(vehicle) {
             const isHighlighted = highlightedBuses.has(vehicle.vehicle_id);
 
+            // Determine direction from headsign
+            const headsign = (vehicle.headsign || '').toUpperCase();
+            let directionArrow = '';
+            let directionColor = isHighlighted ? '#ff9800' : '#667eea';
+
+            // Extract direction from headsign (N/S/E/W or To keywords)
+            if (headsign.includes(' N ') || headsign.includes('NORTH')) {
+                directionArrow = '↑';
+                directionColor = '#2196f3'; // Blue for North
+            } else if (headsign.includes(' S ') || headsign.includes('SOUTH')) {
+                directionArrow = '↓';
+                directionColor = '#f44336'; // Red for South
+            } else if (headsign.includes(' E ') || headsign.includes('EAST')) {
+                directionArrow = '→';
+                directionColor = '#4caf50'; // Green for East
+            } else if (headsign.includes(' W ') || headsign.includes('WEST')) {
+                directionArrow = '←';
+                directionColor = '#ff9800'; // Orange for West
+            } else if (headsign.includes('TO ')) {
+                // Try to infer from destination
+                const destination = headsign.split('TO ')[1] || '';
+                if (destination.includes('KIPLING') || destination.includes('ETOBICOKE')) {
+                    directionArrow = '→'; // East
+                    directionColor = '#4caf50';
+                } else if (destination.includes('MALTON') || destination.includes('AIRPORT')) {
+                    directionArrow = '←'; // West
+                    directionColor = '#ff9800';
+                }
+            }
+
+            // Use bearing if available and no direction from headsign
+            if (!directionArrow && vehicle.bearing !== null && vehicle.bearing !== undefined) {
+                const bearing = vehicle.bearing;
+                if (bearing >= 315 || bearing < 45) {
+                    directionArrow = '↑'; // North
+                    directionColor = '#2196f3';
+                } else if (bearing >= 45 && bearing < 135) {
+                    directionArrow = '→'; // East
+                    directionColor = '#4caf50';
+                } else if (bearing >= 135 && bearing < 225) {
+                    directionArrow = '↓'; // South
+                    directionColor = '#f44336';
+                } else {
+                    directionArrow = '←'; // West
+                    directionColor = '#ff9800';
+                }
+            }
+
             const busIcon = L.divIcon({
                 className: 'bus-marker',
                 html: `<div style="
@@ -1085,6 +1133,16 @@
                     align-items: center;
                     gap: 2px;
                 ">
+                    ${directionArrow ? `<span style="
+                        background: ${directionColor};
+                        color: white;
+                        padding: 2px 3px;
+                        border-radius: 3px;
+                        font-size: 12px;
+                        font-weight: bold;
+                        line-height: 1;
+                        box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+                    ">${directionArrow}</span>` : ''}
                     <span style="font-size: 16px;">🚌</span>
                     <span style="
                         background: white;
@@ -1097,8 +1155,8 @@
                         line-height: 1;
                     ">${vehicle.route_number || vehicle.route_id}</span>
                 </div>`,
-                iconSize: [40, 20],
-                iconAnchor: [20, 10]
+                iconSize: [55, 20],
+                iconAnchor: [27, 10]
             });
 
             const marker = L.marker([vehicle.latitude, vehicle.longitude], { icon: busIcon })
