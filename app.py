@@ -389,14 +389,25 @@ def api_alerts():
     
     alerts = []
     for row in cursor.fetchall():
+        alert_id = row['alert_id']
+        
+        # Get affected routes for this alert
+        cursor.execute("""
+            SELECT DISTINCT route_id 
+            FROM alert_affected_entities 
+            WHERE alert_id = ? AND route_id IS NOT NULL
+        """, (alert_id,))
+        route_ids = [r['route_id'] for r in cursor.fetchall()]
+        
         alerts.append({
-            'id': row['alert_id'],
+            'id': alert_id,
             'cause': row['cause'],
             'effect': row['effect'],
             'header': row['header_text'],
             'description': row['description_text'],
             'url': row['url'],
-            'timestamp': row['timestamp']
+            'timestamp': row['timestamp'],
+            'route_ids': route_ids
         })
     
     conn.close()

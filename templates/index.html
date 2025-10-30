@@ -23,7 +23,7 @@
 
         /* Top Navbar */
         .navbar {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #f15a29 0%, #ff7f50 100%);
             color: white;
             padding: 12px 20px;
             display: flex;
@@ -106,8 +106,8 @@
 
         .sidebar-tab.active {
             background: white;
-            color: #667eea;
-            border-bottom: 2px solid #667eea;
+            color: #f15a29;
+            border-bottom: 2px solid #f15a29;
         }
 
         .sidebar-content {
@@ -144,8 +144,8 @@
         select:focus,
         input:focus {
             outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            border-color: #f15a29;
+            box-shadow: 0 0 0 3px rgba(241, 90, 41, 0.1);
         }
 
         .autocomplete-container {
@@ -238,13 +238,13 @@
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #f15a29 0%, #ff7f50 100%);
             color: white;
         }
 
         .btn-primary:hover {
             transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 4px 12px rgba(241, 90, 41, 0.4);
         }
 
         .btn-secondary {
@@ -275,7 +275,7 @@
 
         .result-section h3 {
             font-size: 1em;
-            color: #667eea;
+            color: #f15a29;
             margin-bottom: 10px;
             padding-bottom: 6px;
             border-bottom: 2px solid #f0f0f0;
@@ -286,7 +286,7 @@
             padding: 12px;
             border-radius: 6px;
             margin-bottom: 10px;
-            border-left: 3px solid #667eea;
+            border-left: 3px solid #f15a29;
         }
 
         .route-header {
@@ -299,7 +299,7 @@
         .route-number {
             font-weight: 600;
             font-size: 1.1em;
-            color: #667eea;
+            color: #f15a29;
         }
 
         .route-time {
@@ -326,7 +326,7 @@
             border-radius: 8px;
             padding: 12px;
             margin-bottom: 10px;
-            border-left: 3px solid #667eea;
+            border-left: 3px solid #f15a29;
             cursor: pointer;
             transition: all 0.2s;
         }
@@ -351,11 +351,11 @@
         .bus-route {
             font-weight: 600;
             font-size: 1em;
-            color: #667eea;
+            color: #f15a29;
         }
 
         .bus-eta {
-            background: #667eea;
+            background: #f15a29;
             color: white;
             padding: 3px 8px;
             border-radius: 12px;
@@ -408,7 +408,7 @@
         }
 
         .refresh-btn {
-            background: #667eea;
+            background: #f15a29;
             color: white;
         }
 
@@ -430,6 +430,25 @@
             background: #fff3e0;
             border-left: 3px solid #ff9800;
             color: #f57c00;
+        }
+
+        .route-badge {
+            display: inline-block;
+            background: #f15a29;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.75em;
+            font-weight: 600;
+            margin-right: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .route-badge:hover {
+            background: #d14a20;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 6px rgba(241, 90, 41, 0.4);
         }
 
         .alert-danger {
@@ -454,7 +473,7 @@
 
         .spinner {
             border: 3px solid #f3f3f3;
-            border-top: 3px solid #667eea;
+            border-top: 3px solid #f15a29;
             border-radius: 50%;
             width: 30px;
             height: 30px;
@@ -628,6 +647,9 @@
                 <button class="map-control-btn refresh-btn" onclick="refreshLiveData()">
                     🔴 Live Refresh
                 </button>
+                <button class="map-control-btn btn-secondary" onclick="showMyLocation()">
+                    📍 My Location
+                </button>
             </div>
         </div>
     </div>
@@ -637,9 +659,10 @@
         let map;
         let busMarkers = [];
         let autoRefreshInterval;
-        let currentTab = 'planner';
+        let currentTab = 'live';
         let highlightedBuses = new Set();
         let userLocation = null;
+        let userLocationMarker = null;
         let allStops = [];
         let allRoutes = [];
         let selectedStopIndex = -1;
@@ -655,6 +678,27 @@
             }).addTo(map);
 
             console.log('Map initialized');
+        }
+
+        // Set/update user location marker
+        function setUserLocation(lat, lon) {
+            // Remove old marker if exists
+            if (userLocationMarker) {
+                map.removeLayer(userLocationMarker);
+            }
+
+            // Add new marker
+            userLocationMarker = L.marker([lat, lon], {
+                icon: L.divIcon({
+                    className: 'user-marker',
+                    html: '<div style="font-size: 24px;">📍</div>',
+                    iconSize: [30, 30],
+                    iconAnchor: [15, 30]
+                }),
+                zIndexOffset: 1000 // Keep on top
+            }).addTo(map).bindPopup('📍 You are here');
+
+            userLocation = { lat, lon };
         }
 
         // Switch between tabs
@@ -1032,6 +1076,7 @@
             document.getElementById('routeFilterResults').classList.remove('show');
             document.getElementById('routeFilterSearch').nextElementSibling.classList.add('show');
             loadVehicles(); // Reload vehicles with filter
+            loadAlerts(); // Reload alerts with filter
         }
 
         function clearRouteFilter() {
@@ -1040,6 +1085,27 @@
             document.getElementById('routeFilterResults').classList.remove('show');
             document.getElementById('routeFilterSearch').nextElementSibling.classList.remove('show');
             loadVehicles(); // Reload all vehicles
+            loadAlerts(); // Reload all alerts
+        }
+
+        // Select route from alert click
+        async function selectRouteFromAlert(routeId) {
+            // Make sure we have routes loaded
+            if (allRoutes.length === 0) {
+                await loadRoutes();
+            }
+
+            // Find the route
+            const route = allRoutes.find(r => r.id === routeId);
+
+            if (route) {
+                selectRoute(route.id, route.number, route.name);
+
+                // Scroll map into view if on mobile
+                document.getElementById('map').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            } else {
+                console.warn('Route not found:', routeId);
+            }
         }
 
         // Load vehicles (buses)
@@ -1081,7 +1147,7 @@
             // Determine direction from headsign
             const headsign = (vehicle.headsign || '').toUpperCase();
             let directionArrow = '';
-            let directionColor = isHighlighted ? '#ff9800' : '#667eea';
+            let directionColor = isHighlighted ? '#ff9800' : '#f15a29';
 
             // Extract direction from headsign (N/S/E/W or To keywords)
             if (headsign.includes(' N ') || headsign.includes('NORTH')) {
@@ -1146,12 +1212,12 @@
                     <span style="font-size: 16px;">🚌</span>
                     <span style="
                         background: white;
-                        color: ${isHighlighted ? '#ff9800' : '#667eea'};
+                        color: ${isHighlighted ? '#ff9800' : '#f15a29'};
                         padding: 2px 4px;
                         border-radius: 3px;
                         font-size: 10px;
                         font-weight: bold;
-                        border: 1px solid ${isHighlighted ? '#ff9800' : '#667eea'};
+                        border: 1px solid ${isHighlighted ? '#ff9800' : '#f15a29'};
                         line-height: 1;
                     ">${vehicle.route_number || vehicle.route_id}</span>
                 </div>`,
@@ -1200,18 +1266,41 @@
 
             try {
                 const response = await fetch(url);
-                const alerts = await response.json();
+                const data = await response.json();
+
+                // API returns {alerts: [...], count: N}
+                const alerts = data.alerts || data || [];
 
                 const alertsDiv = document.getElementById('serviceAlerts');
 
                 if (alerts.length > 0) {
-                    let html = '<div class="result-section"><h3>Service Alerts</h3>';
+                    let html = '<div class="result-section"><h3>🚨 Service Alerts</h3>';
 
                     alerts.forEach(alert => {
+                        // API uses 'header' and 'description', not 'header_text' and 'description_text'
+                        const header = alert.header || alert.header_text || 'Service Alert';
+                        const description = alert.description || alert.description_text || '';
+                        const routeIds = alert.route_ids || [];
+
+                        // Create clickable route badges
+                        let routeBadges = '';
+                        if (routeIds.length > 0) {
+                            routeBadges = '<div style="margin-top: 8px;">';
+                            routeIds.forEach(routeId => {
+                                routeBadges += `
+                                    <span class="route-badge" onclick="selectRouteFromAlert('${routeId}')">
+                                        Route ${routeId}
+                                    </span>
+                                `;
+                            });
+                            routeBadges += '</div>';
+                        }
+
                         html += `
                             <div class="alert alert-warning">
-                                <strong>${alert.header_text || 'Service Alert'}</strong><br>
-                                ${alert.description_text || ''}
+                                <strong>${header}</strong><br>
+                                ${description}
+                                ${routeBadges}
                             </div>
                         `;
                     });
@@ -1251,21 +1340,14 @@
                         const response = await fetch(`/api/nearby-buses?lat=${userLocation.lat}&lon=${userLocation.lon}&limit=10`);
                         const data = await response.json();
 
-                        displayNearbyBuses(data.nearby_buses);
-                        highlightNearbyBuses(data.nearby_buses);
+                        displayNearbyBuses(data.buses || data.nearby_buses || []);
+                        highlightNearbyBuses(data.buses || data.nearby_buses || []);
 
                         // Center map on user
                         map.setView([userLocation.lat, userLocation.lon], 14);
 
-                        // Add user marker
-                        L.marker([userLocation.lat, userLocation.lon], {
-                            icon: L.divIcon({
-                                className: 'user-marker',
-                                html: '<div style="font-size: 24px;">📍</div>',
-                                iconSize: [30, 30],
-                                iconAnchor: [15, 30]
-                            })
-                        }).addTo(map).bindPopup('You are here');
+                        // Add/update user marker
+                        setUserLocation(userLocation.lat, userLocation.lon);
 
                         btn.textContent = '✅ Buses found';
                         setTimeout(() => {
@@ -1275,6 +1357,7 @@
 
                     } catch (error) {
                         console.error('Error:', error);
+                        console.error('Full response data:', data);
                         alert('Error finding nearby buses');
                         btn.textContent = '📍 Find Buses Near Me';
                         btn.disabled = false;
@@ -1293,7 +1376,7 @@
         function displayNearbyBuses(buses) {
             const container = document.getElementById('nearbyBusesContainer');
 
-            if (buses.length === 0) {
+            if (!buses || buses.length === 0) {
                 container.innerHTML = '<div class="no-results">No buses found nearby</div>';
                 return;
             }
@@ -1301,16 +1384,21 @@
             let html = '<div class="result-section"><h3>Buses Near You</h3>';
 
             buses.forEach((bus, index) => {
+                const routeNumber = bus.route_number || bus.route_short_name;
+                const routeName = bus.route_name || bus.route_long_name;
+                const stopDistance = bus.stop_distance_from_user || bus.stop_distance || 0;
+                const headsign = bus.headsign || bus.trip_headsign || 'N/A';
+
                 html += `
                     <div class="bus-card" onclick="focusBusOnMap('${bus.vehicle_id}')">
                         <div class="bus-header">
-                            <span class="bus-route">Route ${bus.route_short_name}</span>
+                            <span class="bus-route">Route ${routeNumber}</span>
                             <span class="bus-eta">${bus.eta_minutes} min</span>
                         </div>
                         <div class="bus-details">
-                            ${bus.route_long_name}<br>
-                            Stop: ${bus.stop_name} (${bus.stop_distance.toFixed(2)} km)<br>
-                            Headsign: ${bus.trip_headsign || 'N/A'}
+                            ${routeName}<br>
+                            Stop: ${bus.stop_name} (${stopDistance.toFixed(2)} km)<br>
+                            ${headsign}
                         </div>
                     </div>
                 `;
@@ -1407,6 +1495,33 @@
                     btn.disabled = false;
                 }, 2000);
             }
+        }
+
+        // Show user's current location on map
+        function showMyLocation() {
+            if (!navigator.geolocation) {
+                alert('Geolocation is not supported by your browser');
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+
+                    setUserLocation(lat, lon);
+                    map.setView([lat, lon], 15);
+
+                    // Open popup
+                    if (userLocationMarker) {
+                        userLocationMarker.openPopup();
+                    }
+                },
+                (error) => {
+                    console.error('Geolocation error:', error);
+                    alert('Unable to get your location. Please check your browser permissions.');
+                }
+            );
         }
 
         // Update data freshness indicator
