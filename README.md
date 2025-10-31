@@ -1,116 +1,68 @@
-# MiWay Route Planner
+# MiWay Route Planner 🚌
 
-A web application for planning bus routes using Mississauga MiWay GTFS data.
-
-## Features
-
-### Static Route Planning
-- Search for direct routes between any two bus stops
-- View departure and arrival times
-- See next available buses
-- Complete route details with all intermediate stops
-- 📍 Location-based stop finder (uses browser GPS)
-
-### Real-Time Data (TRULY LIVE!)
-- 🚨 Live service alerts (construction, detours, stop changes)
-- 🚍 **Real-time bus positions** - Downloads from MiWay every 30 seconds!
-- 🔴 **Manual live refresh** - Force update anytime
-- ⏱️ **Data freshness indicator** - See exactly how fresh your data is
-- ⏰ Trip delay predictions
-- 👥 Bus occupancy status (crowding levels)
-- 📍 **Find buses near you** - Shows which buses you can catch with ETAs!
-- 📈 **API Status Dashboard** - Monitor MiWay endpoints with detailed health logs
+A real-time web application for planning bus routes and tracking live buses using Mississauga MiWay GTFS data.
 
 ## Quick Start
 
-### Option 1: Using Scripts (Recommended)
-
-1. **First time setup:**
 ```bash
-./setup.sh
+# First time setup
+./scripts/setup.sh
+
+# Run the application
+./scripts/run.sh
 ```
 
-2. **Run the app:**
-```bash
-./run.sh
+Then open: **http://localhost:5001**
+
+## Project Structure
+
+```
+gtfs-mississauga/
+├── static/           # Frontend assets
+│   ├── css/         # Stylesheets
+│   └── js/          # JavaScript files
+├── templates/       # HTML templates
+├── docs/            # Documentation
+├── scripts/         # Setup and run scripts
+├── google_transit/  # GTFS data files
+├── app.py           # Main Flask application
+├── load_gtfs.py     # GTFS data loader
+├── ingest_realtime.py  # Real-time data ingester
+├── live_updater.py  # Background live data updater
+└── requirements.txt # Python dependencies
 ```
 
-3. **Open browser to:**
-   - Main App: `http://localhost:5001`
-   - API Status Dashboard: `http://localhost:5001/status`
+## Features
 
-### Option 2: Manual Setup
+- ✅ Real-time bus tracking with live map
+- ✅ Route planning between stops
+- ✅ Find buses near you with ETAs
+- ✅ Service alerts and notifications
+- ✅ Location-based stop finder
+- ✅ API health monitoring dashboard
 
-1. **Create virtual environment:**
-```bash
-python3 -m venv venv
-source venv/bin/activate
-```
+## Documentation
 
-2. **Install dependencies:**
-```bash
-pip install Flask
-```
+Full documentation is available in the `/docs` folder:
 
-3. **Load GTFS data into database:**
-```bash
-python3 load_gtfs.py
-```
+- **[Full Documentation](docs/README.md)** - Complete user guide
+- **[Troubleshooting](docs/TROUBLESHOOTING.md)** - Common issues and solutions
+- **[API Status Guide](docs/STATUS_PAGE_GUIDE.md)** - How to use the status dashboard
+- **[Live Tracking](docs/TRULY_LIVE_TRACKING.md)** - How real-time updates work
 
-4. **Run the app:**
-```bash
-python3 app.py
-```
+## Tech Stack
 
-5. **Open browser to:** `http://localhost:5001`
+- **Backend**: Python Flask
+- **Database**: SQLite
+- **Frontend**: Vanilla JavaScript, Leaflet.js for maps
+- **Data**: GTFS & GTFS-Realtime from MiWay
 
-### Optional: Load Real-Time Data
+## License
 
-To add live bus tracking, alerts, and delays:
+This project is for educational purposes.
 
-```bash
-source venv/bin/activate
-python3 ingest_realtime.py
-```
+---
 
-This loads:
-- Service alerts (construction, detours)
-- Live vehicle positions (GPS coordinates)
-- Real-time trip updates (delays)
+Made with ❤️ for Mississauga transit riders
 
-View the data:
-```bash
-python3 view_realtime.py
-```
-
-See [REALTIME_README.md](REALTIME_README.md) for more details.
-
-## Automated Updates (NEW!)
-
-Keep your data fresh automatically! The app can download the latest GTFS data from MiWay's servers.
-
-### Quick Setup
-```bash
-./setup_cron.sh
-crontab -e  # Add the line shown
-```
-
-This will update your app nightly with:
-- ✅ Latest routes and schedules
-- ✅ Fresh vehicle positions  
-- ✅ Current service alerts
-
-**Data Sources:**
-- Static GTFS: https://www.miapp.ca/GTFS/google_transit.zip
-- Vehicle Positions: https://www.miapp.ca/GTFS_RT/Vehicle/VehiclePositions.pb
-- Trip Updates: https://www.miapp.ca/GTFS_RT/TripUpdate/TripUpdates.pb
-- Alerts: https://www.miapp.ca/gtfs_rt/Alerts/Alerts.pb
-
-See [AUTOMATED_UPDATES.md](AUTOMATED_UPDATES.md) for full documentation.
-
-## How it works
-
-The app loads GTFS (General Transit Feed Specification) data from the `google_transit/` folder into a SQLite database. It then queries this database to find trips that contain both your source and destination stops in the correct order.
-
-No complex pathfinding needed - the GTFS data already contains complete trip information!
 

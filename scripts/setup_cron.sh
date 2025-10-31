@@ -25,7 +25,7 @@ LOG_FILE="logs/nightly_update_$(date +%Y%m%d_%H%M%S).log"
 
 # Run the update
 echo "Starting nightly update at $(date)" > "$LOG_FILE"
-python3 nightly_update.py >> "$LOG_FILE" 2>&1
+python3 utils/nightly_update.py >> "$LOG_FILE" 2>&1
 EXIT_CODE=$?
 
 echo "Completed with exit code: $EXIT_CODE at $(date)" >> "$LOG_FILE"

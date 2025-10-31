@@ -8,7 +8,7 @@ echo ""
 
 # Test 1: Download
 echo "Test 1: Downloading data..."
-python3 download_gtfs.py
+python3 utils/download_gtfs.py
 if [ $? -eq 0 ]; then
     echo "✅ Download test passed"
 else

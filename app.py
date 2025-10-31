@@ -8,7 +8,7 @@ from datetime import datetime
 import math
 import threading
 import time
-from live_updater import update_all_realtime_data
+from utils.live_updater import update_all_realtime_data
 
 app = Flask(__name__)
 DB_FILE = 'miway.db'
